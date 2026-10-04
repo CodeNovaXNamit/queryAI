@@ -24,7 +24,13 @@ export default function Layout({ children }) {
   const [signingOut, setSigningOut] = useState(false);
   const [signedOutMsg, setSignedOutMsg] = useState(false);
   const [adminDropOpen, setAdminDropOpen] = useState(false);
+  const [branchDropOpen, setBranchDropOpen] = useState(false);
+  const [langDropOpen, setLangDropOpen] = useState(false);
+  const [activeBranch, setActiveBranch] = useState('Main Branch (HQ)');
+  const [activeLang, setActiveLang] = useState('English');
   const dropRef = useRef(null);
+  const branchDropRef = useRef(null);
+  const langDropRef = useRef(null);
 
   const cfg = useAppConfig();
 
@@ -58,9 +64,9 @@ export default function Layout({ children }) {
   // Close dropdown when clicking outside
   useEffect(() => {
     const handler = (e) => {
-      if (dropRef.current && !dropRef.current.contains(e.target)) {
-        setAdminDropOpen(false);
-      }
+      if (dropRef.current && !dropRef.current.contains(e.target)) setAdminDropOpen(false);
+      if (branchDropRef.current && !branchDropRef.current.contains(e.target)) setBranchDropOpen(false);
+      if (langDropRef.current && !langDropRef.current.contains(e.target)) setLangDropOpen(false);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
@@ -128,6 +134,47 @@ export default function Layout({ children }) {
 
           {/* Right side controls */}
           <div className="flex items-center gap-2 shrink-0">
+            {/* Language dropdown */}
+            <div className="relative hidden md:block" ref={langDropRef}>
+              <button
+                onClick={() => setLangDropOpen(o => !o)}
+                className="flex items-center gap-1.5 px-2 py-1.5 border border-transparent hover:border-rule transition-colors text-xs font-medium text-graphite rounded"
+              >
+                <span>{activeLang === 'English' ? 'EN' : 'HI'}</span>
+                <img src="/svg/chevron-down.svg" alt="" className={`w-3 h-3 transition-transform ${langDropOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {langDropOpen && (
+                <div className="absolute right-0 top-full mt-1 w-32 bg-paper border border-rule shadow-lg z-50 py-1">
+                  <button onClick={() => { setActiveLang('English'); setLangDropOpen(false); }} className="w-full text-left px-4 py-2 text-sm text-graphite hover:bg-cream hover:text-ink">English</button>
+                  <button onClick={() => { setActiveLang('Hindi'); setLangDropOpen(false); }} className="w-full text-left px-4 py-2 text-sm text-graphite hover:bg-cream hover:text-ink">हिन्दी (Hindi)</button>
+                </div>
+              )}
+            </div>
+
+            {/* Branch Selector (Admin only feature A) */}
+            {user && (
+              <div className="relative hidden md:block" ref={branchDropRef}>
+                <button
+                  onClick={() => setBranchDropOpen(o => !o)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 border border-rule transition-colors text-xs font-medium rounded text-graphite hover:border-ink hover:text-ink"
+                >
+                  <span className="truncate max-w-[120px]">{activeBranch}</span>
+                  <img src="/svg/chevron-down.svg" alt="" className={`w-3 h-3 transition-transform ${branchDropOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {branchDropOpen && (
+                  <div className="absolute right-0 top-full mt-1 w-48 bg-paper border border-rule shadow-lg z-50 py-1">
+                    <div className="px-4 py-2 text-xs font-semibold text-graphite bg-cream border-b border-rule mb-1">Organizations / Branches</div>
+                    <button onClick={() => { setActiveBranch('Main Branch (HQ)'); setBranchDropOpen(false); }} className="w-full text-left px-4 py-2 text-sm text-graphite hover:bg-cream hover:text-ink">Main Branch (HQ)</button>
+                    <button onClick={() => { setActiveBranch('North City Clinic'); setBranchDropOpen(false); }} className="w-full text-left px-4 py-2 text-sm text-graphite hover:bg-cream hover:text-ink">North City Clinic</button>
+                    <button onClick={() => { setActiveBranch('Downtown Branch'); setBranchDropOpen(false); }} className="w-full text-left px-4 py-2 text-sm text-graphite hover:bg-cream hover:text-ink">Downtown Branch</button>
+                    <div className="border-t border-rule mt-1 pt-1">
+                       <button className="w-full text-left px-4 py-2 text-sm text-accent hover:bg-accent/5">+ Add new branch</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Notification center (self-hides unless an admin/staff is signed in) */}
             {(user || staff) && <NotificationBell />}
 

@@ -162,6 +162,37 @@ export default function AdminSetup() {
         </div>
       </div>
 
+      {/* Messaging section */}
+      <div className="mt-10 pt-8 border-t border-rule">
+        <span className="label block mb-6">Messaging Add-ons</span>
+        <div className="grid sm:grid-cols-2 gap-6">
+          <div className="p-4 border border-rule bg-cream">
+            <div className="flex items-center justify-between mb-2">
+              <span className="font-medium text-sm">WhatsApp Notifications</span>
+              <button className="relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none bg-ink">
+                <span className="inline-block h-3.5 w-3.5 rounded-full bg-paper shadow transition-transform translate-x-4" />
+              </button>
+            </div>
+            <p className="text-xs text-graphite">Send token URLs and turn alerts to customers via WhatsApp.</p>
+            <div className="mt-3">
+              <input type="text" placeholder="WhatsApp API Key" className="w-full border border-rule bg-paper px-3 py-2 text-xs focus:outline-none focus:border-ink" />
+            </div>
+          </div>
+          <div className="p-4 border border-rule bg-cream">
+            <div className="flex items-center justify-between mb-2">
+              <span className="font-medium text-sm">SMS Fallback</span>
+              <button className="relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none bg-rule">
+                <span className="inline-block h-3.5 w-3.5 rounded-full bg-paper shadow transition-transform translate-x-1" />
+              </button>
+            </div>
+            <p className="text-xs text-graphite">Send standard text messages if WhatsApp delivery fails.</p>
+            <div className="mt-3 opacity-50 pointer-events-none">
+              <input type="text" placeholder="Twilio / Local SMS API Key" className="w-full border border-rule bg-paper px-3 py-2 text-xs focus:outline-none focus:border-ink" />
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Queue behaviour section */}
       <div className="mt-10 pt-8 border-t border-rule">
         <span className="label block mb-6">Queue behaviour</span>

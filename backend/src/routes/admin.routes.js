@@ -52,6 +52,8 @@ router.get('/queues/overview',          asyncHandler(controller.queuesOverview))
 router.get('/queues/:id',               asyncHandler(controller.getQueue));
 router.get('/queues/:id/staff',         asyncHandler(controller.queueStaff));
 router.get('/queues/:id/analytics',     asyncHandler(controller.queueAnalytics));
+router.get('/queues/:id/analytics/trends', asyncHandler(controller.queueTrends));
+router.get('/queues/:id/analytics/export', asyncHandler(controller.exportQueueAnalyticsCsv));
 router.post('/queues',                  asyncHandler(controller.createQueue));
 router.put('/queues/reorder',           asyncHandler(controller.reorderQueues));
 router.put('/queues/:id',               asyncHandler(controller.updateQueue));

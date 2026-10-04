@@ -74,6 +74,38 @@ async function exportAnalyticsCsv(req, res) {
   });
 }
 
+async function exportQueueAnalyticsCsv(req, res) {
+  const queue = await queueAdminService.getQueueOverviewById(req.params.id);
+  if (!queue) return res.status(404).json({ error: 'Queue not found' });
+  
+  const fs = require('fs');
+  const filepath = path.resolve(__dirname, '..', '..', config.analytics.csvPath);
+  
+  try {
+    const data = await fs.promises.readFile(filepath, 'utf8');
+    const lines = data.trim().split('\n');
+    if (lines.length < 1) return res.status(404).json({ error: 'CSV empty.' });
+    
+    const header = lines[0];
+    const headerCols = header.split(',').map(c => c.trim());
+    const svcIdx = headerCols.indexOf('service');
+    
+    const outLines = [header];
+    for (let i = 1; i < lines.length; i++) {
+       const parts = lines[i].split(',');
+       if (parts[svcIdx] === queue.key || parts[svcIdx] === `"${queue.key}"`) {
+          outLines.push(lines[i]);
+       }
+    }
+    
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="queue_events_${queue.key}.csv"`);
+    res.send(outLines.join('\n') + '\n');
+  } catch (err) {
+    res.status(404).json({ error: 'CSV file not found yet.' });
+  }
+}
+
 async function getStaffMetrics(req, res) {
   const data = await analyticsService.getStaffMetrics();
   res.json(data);
@@ -193,6 +225,19 @@ async function queueAnalytics(req, res) {
     totalIssued: stats.serviceDistribution?.[queue.key] || 0,
     peakHours: stats.peakHoursByService?.[queue.key] || {},
     avgWaitSeconds: Math.round(stats.avgWaitSeconds || 0),
+  });
+}
+
+async function queueTrends(req, res) {
+  const queue = await queueAdminService.getQueueOverviewById(req.params.id);
+  if (!queue) {
+    return res.status(404).json({ error: 'Queue not found' });
+  }
+  const trends = await analyticsService.getQueueTrends(queue.key);
+  res.json({
+    key: queue.key,
+    label: queue.label,
+    trends
   });
 }
 
@@ -416,7 +461,7 @@ async function setAdminRole(req, res) {
 
 module.exports = {
   callNext, callNextPriority, pause, resume, activeQueue, reset,
-  getAnalytics, exportAnalyticsCsv, getStaffMetrics, getPredictions, getAuditLog,
+  getAnalytics, exportAnalyticsCsv, exportQueueAnalyticsCsv, getStaffMetrics, getPredictions, getAuditLog,
   startAutoMode, stopAutoMode, getAutoModeStatus,
   getAppConfig, updateAppConfig,
   getFeedback,
@@ -429,7 +474,7 @@ module.exports = {
   listAppointments, cancelAppointment, confirmAppointment,
   pauseService, resumeService,
   listAdmins, createAdmin, deleteAdmin, setAdminRole,
-  queueStaff, queueAnalytics,
+  queueStaff, queueAnalytics, queueTrends,
   listQueues, queuesOverview, getQueue, createQueue, updateQueue,
   setQueueEnabled, archiveQueue, deleteQueue, reorderQueues,
 };

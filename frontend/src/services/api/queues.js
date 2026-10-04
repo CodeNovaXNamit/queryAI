@@ -12,3 +12,4 @@ export const apiDeleteQueue     = (id) => api.delete(`/admin/queues/${id}`).then
 export const apiReorderQueues   = (orderedIds) => api.put('/admin/queues/reorder', { orderedIds }).then(r => r.data);
 export const apiQueueStaff      = (id) => api.get(`/admin/queues/${id}/staff`).then(r => r.data);
 export const apiQueueAnalytics  = (id) => api.get(`/admin/queues/${id}/analytics`).then(r => r.data);
+export const apiQueueTrends     = (id) => api.get(`/admin/queues/${id}/analytics/trends`).then(r => r.data);

@@ -345,4 +345,71 @@ async function close() {
   mongoTokensCollection = null;
 }
 
-module.exports = { logEvent, close, CSV_COLUMNS, getTrafficStats, getStaffMetrics, upsertTokenRecord };
+async function getQueueTrends(queueKey) {
+  try {
+    const fbSnap = await refs.tokens().once('value');
+    const fbTokens = Object.values(fbSnap.val() || {}).filter(t => t.service === queueKey);
+
+    const now = new Date();
+    const daily = {};
+    const weekly = {};
+    const monthly = {};
+
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(now - i * 86400000).toISOString().slice(0, 10);
+      daily[d] = 0;
+    }
+
+    for (let i = 11; i >= 0; i--) {
+       const diffDate = new Date(now - i * 7 * 86400000);
+       const d = diffDate.toISOString().slice(0, 10);
+       weekly[`W-${d}`] = 0;
+    }
+
+    for (let i = 11; i >= 0; i--) {
+       const d = new Date(now.getFullYear(), now.getMonth() - i, 1).toISOString().slice(0, 7);
+       monthly[d] = 0;
+    }
+
+    let avgWaitTotal = 0;
+    let avgWaitCount = 0;
+
+    for (const token of fbTokens) {
+      if (!token.issuedAt) continue;
+      const tDate = new Date(token.issuedAt);
+      const dayKey = tDate.toISOString().slice(0, 10);
+      const monthKey = tDate.toISOString().slice(0, 7);
+      
+      const diff = Math.floor((now - tDate) / (7 * 86400000));
+      if (diff >= 0 && diff <= 11) {
+          const weekDate = new Date(now - diff * 7 * 86400000).toISOString().slice(0, 10);
+          const weekKey = `W-${weekDate}`;
+          if (weekly[weekKey] !== undefined) weekly[weekKey]++;
+      }
+
+      if (daily[dayKey] !== undefined) daily[dayKey]++;
+      if (monthly[monthKey] !== undefined) monthly[monthKey]++;
+
+      if (token.status === 'served' && token.calledAt) {
+          const wait = (new Date(token.calledAt) - new Date(token.issuedAt))/1000;
+          if (wait > 0) {
+              avgWaitTotal += wait;
+              avgWaitCount++;
+          }
+      }
+    }
+
+    return {
+      daily,
+      weekly,
+      monthly,
+      avgWaitSeconds: avgWaitCount > 0 ? Math.round(avgWaitTotal / avgWaitCount) : 0,
+      totalIssued: fbTokens.length
+    };
+  } catch (err) {
+    console.error('[analytics] getQueueTrends failed:', err.message);
+    return { daily: {}, weekly: {}, monthly: {}, avgWaitSeconds: 0, totalIssued: 0 };
+  }
+}
+
+module.exports = { logEvent, close, CSV_COLUMNS, getTrafficStats, getStaffMetrics, upsertTokenRecord, getQueueTrends };

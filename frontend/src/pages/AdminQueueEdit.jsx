@@ -3,17 +3,19 @@ import { Navigate, Link, useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import {
   apiGetQueue, apiUpdateQueue, apiSetQueueEnabled, apiArchiveQueue, apiDeleteQueue,
-  apiListStaff, apiAssignStaffQueue, apiQueueAnalytics,
+  apiListStaff, apiAssignStaffQueue, apiQueueAnalytics, apiQueueTrends,
 } from '../services/api.js';
 import QueueForm, { formToPayload } from '../components/QueueForm.jsx';
 import ShareDialog from '../components/ShareDialog.jsx';
 
 function QueueAnalytics({ queueId }) {
   const [data, setData] = useState(null);
+  const [trends, setTrends] = useState(null);
   const [sharing, setSharing] = useState(false);
   useEffect(() => {
     let active = true;
     apiQueueAnalytics(queueId).then(d => { if (active) setData(d); }).catch(() => {});
+    apiQueueTrends(queueId).then(d => { if (active) setTrends(d.trends); }).catch(() => {});
     return () => { active = false; };
   }, [queueId]);
 
@@ -22,16 +24,44 @@ function QueueAnalytics({ queueId }) {
   const max = Math.max(...hours.map(x => x.n), 1);
   const fmt12 = (h) => h === 0 ? '12a' : h === 12 ? '12p' : h < 12 ? `${h}a` : `${h - 12}p`;
 
+  const dailyEntries = trends ? Object.entries(trends.daily || {}).slice(-7).reverse() : [];
+  const maxDaily = Math.max(...dailyEntries.map(x => x[1]), 1);
+
+  const downloadCsv = async () => {
+    try {
+      const token = localStorage.getItem('ql_admin_token');
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/admin/queues/${queueId}/analytics/export`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error('Export failed');
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `queue_events_${data.key}.csv`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      alert('Could not export CSV data at this time.');
+    }
+  };
+
   return (
     <div className="mt-10">
       <div className="flex items-center justify-between mb-1">
         <h2 className="font-display text-2xl tracking-tightest">Queue analytics</h2>
-        <button onClick={() => setSharing(true)} className="btn-secondary text-xs">Share snapshot</button>
+        <div className="flex gap-2">
+          <button onClick={downloadCsv} className="btn-secondary text-xs flex items-center gap-1">
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+            Export CSV
+          </button>
+          <button onClick={() => setSharing(true)} className="btn-secondary text-xs">Share snapshot</button>
+        </div>
       </div>
       <p className="text-sm text-graphite mb-4">Lifetime activity for this counter.</p>
       {sharing && (
         <ShareDialog
-          payload={{ type: 'analytics', title: `${data.label} — snapshot`, data: {
+          payload={{ type: 'analytics', title: `${data.label} - snapshot`, data: {
             label: data.label, totalIssued: data.totalIssued, waitingCount: data.waitingCount,
             nowServing: data.nowServing, avgWaitSeconds: data.avgWaitSeconds, estimatedWaitSeconds: data.estimatedWaitSeconds,
           } }}
@@ -43,17 +73,36 @@ function QueueAnalytics({ queueId }) {
         <div className="bg-paper p-4 text-center"><div className="font-display text-2xl num">{data.waitingCount}</div><div className="label text-[10px] mt-1">Waiting now</div></div>
         <div className="bg-paper p-4 text-center"><div className="font-display text-2xl num">{Math.round((data.avgWaitSeconds || 0) / 60)}m</div><div className="label text-[10px] mt-1">Avg wait</div></div>
       </div>
-      {hours.length > 0 ? (
-        <div className="border border-rule bg-cream p-4">
-          <div className="label mb-3">Peak hours</div>
-          <div className="flex items-end gap-1 h-28">
-            {hours.map(({ h, n }) => (
-              <div key={h} className="flex-1 flex flex-col items-center justify-end" title={`${fmt12(h)}: ${n}`}>
-                <div className="w-full bg-accent/70" style={{ height: `${(n / max) * 100}%` }} />
-                <span className="text-[9px] text-graphite mt-1">{fmt12(h)}</span>
-              </div>
-            ))}
+      {hours.length > 0 || dailyEntries.length > 0 ? (
+        <div className="grid grid-cols-2 gap-4 mb-5">
+          <div className="border border-rule bg-cream p-4">
+            <div className="label mb-3">Peak hours</div>
+            <div className="flex items-end gap-1 h-28">
+              {hours.map(({ h, n }) => (
+                <div key={h} className="flex-1 flex flex-col items-center justify-end" title={`${fmt12(h)}: ${n}`}>
+                  <div className="w-full bg-accent/70" style={{ height: `${(n / max) * 100}%` }} />
+                  <span className="text-[9px] text-graphite mt-1">{fmt12(h)}</span>
+                </div>
+              ))}
+            </div>
           </div>
+          {dailyEntries.length > 0 && (
+            <div className="border border-rule bg-cream p-4">
+              <div className="label mb-3">Last 7 Days</div>
+              <div className="flex items-end gap-1 h-28">
+                {dailyEntries.map(([date, n]) => {
+                   const dObj = new Date(date);
+                   const dayLbl = isNaN(dObj) ? date.slice(-5) : dObj.toLocaleDateString('en-US', { weekday: 'short' });
+                   return (
+                     <div key={date} className="flex-1 flex flex-col items-center justify-end" title={`${date}: ${n}`}>
+                       <div className="w-full bg-blue-500/70" style={{ height: `${(n / maxDaily) * 100}%` }} />
+                       <span className="text-[9px] text-graphite mt-1">{dayLbl}</span>
+                     </div>
+                   )
+                })}
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <p className="text-sm text-graphite">No activity recorded for this queue yet.</p>
