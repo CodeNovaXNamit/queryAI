@@ -18,3 +18,4 @@ export * from './api/messaging.js';
 export * from './api/notifications.js';
 export * from './api/share.js';
 export * from './api/files.js';
+export * from './api/bhashini.js';

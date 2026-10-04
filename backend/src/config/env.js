@@ -46,6 +46,15 @@ const envSchema = Joi.object({
   AI_API_KEY: Joi.string().allow('').optional(),
   AI_MODEL: Joi.string().allow('').optional(),
   AI_BASE_URL: Joi.string().allow('').optional(),
+
+  // Bhashini TTS (optional). When omitted, the frontend falls back to the
+  // browser speech engine for token status readouts.
+  BHASHINI_USER_ID: Joi.string().allow('').optional(),
+  BHASHINI_API_KEY: Joi.string().allow('').optional(),
+  BHASHINI_PIPELINE_ID: Joi.string().allow('').optional(),
+  BHASHINI_CONFIG_URL: Joi.string().uri().allow('').default('https://meity-auth.ulcacontrib.org/ulca/apis/v0/model/getModelsPipeline'),
+  BHASHINI_TTS_LANGUAGE: Joi.string().allow('').default('en'),
+  BHASHINI_TTS_GENDER: Joi.string().valid('male', 'female').allow('').default('female'),
 }).unknown(true);
 
 const { value: env, error } = envSchema.validate(process.env, { abortEarly: false });
@@ -114,5 +123,14 @@ module.exports = {
     apiKey: env.AI_API_KEY || null,
     model: env.AI_MODEL || null,
     baseUrl: env.AI_BASE_URL || null,
+  },
+
+  bhashini: {
+    userId: env.BHASHINI_USER_ID || null,
+    apiKey: env.BHASHINI_API_KEY || null,
+    pipelineId: env.BHASHINI_PIPELINE_ID || null,
+    configUrl: env.BHASHINI_CONFIG_URL || 'https://meity-auth.ulcacontrib.org/ulca/apis/v0/model/getModelsPipeline',
+    defaultLanguage: env.BHASHINI_TTS_LANGUAGE || 'en',
+    defaultGender: env.BHASHINI_TTS_GENDER || 'female',
   },
 };

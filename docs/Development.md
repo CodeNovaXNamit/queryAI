@@ -2,8 +2,8 @@
 
 ## Repository layout
 
-This monorepo intentionally keeps deployable modules at the root (instead
-of a single `src/`) because Vercel and Render deploy by *root directory* —
+This Turborepo workspace intentionally keeps deployable modules at the root
+(instead of a single `src/`) because Vercel and Render deploy by root directory;
 moving them would break both pipelines. Mapping to the conventional layout:
 
 | Conventional | QueueLess equivalent |
@@ -17,16 +17,16 @@ moving them would break both pipelines. Mapping to the conventional layout:
 ## Everyday commands
 
 ```bash
-# Backend
-cd backend
-npm test                 # full integration suite (Firebase mocked)
-npm run dev              # http://localhost:4000
+# Install all npm workspaces
+npm install
 
-# Frontend
-cd frontend
-npm run dev              # http://localhost:5173
-npm run dev:lan          # dev server reachable on your LAN
-npm run build            # production build
+# Turborepo root commands
+npm run dev              # backend + frontend
+npm run dev:backend      # http://localhost:4000
+npm run dev:frontend     # http://localhost:5173
+npm run dev:lan          # frontend reachable on your LAN
+npm run build            # production build/checks across workspaces
+npm test                 # workspace tests
 
 # Analytics
 cd analytics

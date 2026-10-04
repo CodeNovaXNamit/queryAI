@@ -168,6 +168,19 @@ describe('Public token endpoints', () => {
   });
 });
 
+describe('Bhashini token status TTS', () => {
+  test('fails safely when Bhashini credentials are not configured', async () => {
+    const issue = await request(app).post('/api/v1/tokens').send({ service: 'general' });
+    const res = await request(app)
+      .post('/api/v1/bhashini/token-status-tts')
+      .send({ tokenId: issue.body.token.id });
+
+    expect(res.status).toBe(503);
+    expect(res.body.code).toBe('BHASHINI_NOT_CONFIGURED');
+    expect(res.body.fallbackAvailable).toBe(true);
+  });
+});
+
 describe('Admin authentication', () => {
   test('POST /api/v1/auth/login with correct credentials returns JWT', async () => {
     const res = await request(app).post('/api/v1/auth/login').send({

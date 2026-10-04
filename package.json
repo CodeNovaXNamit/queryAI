@@ -1,0 +1,27 @@
+{
+  "name": "queueless",
+  "version": "1.6.0",
+  "private": true,
+  "description": "QueueLess Turborepo workspace.",
+  "packageManager": "npm@11.10.1",
+  "workspaces": [
+    "backend",
+    "frontend",
+    "firebase",
+    "firebase/functions"
+  ],
+  "scripts": {
+    "dev": "turbo dev --filter=queueless-backend --filter=queueless-frontend",
+    "dev:backend": "turbo dev --filter=queueless-backend",
+    "dev:frontend": "turbo dev --filter=queueless-frontend",
+    "dev:lan": "turbo dev:lan --filter=queueless-frontend",
+    "build": "turbo build check",
+    "check": "turbo check",
+    "test": "turbo test",
+    "lint": "turbo lint",
+    "preview": "turbo preview --filter=queueless-frontend"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.8"
+  }
+}

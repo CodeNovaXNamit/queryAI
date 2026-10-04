@@ -4,7 +4,7 @@ import QRCode from 'qrcode';
 import confetti from 'canvas-confetti';
 import { useQueueState, useTokenLive } from '../hooks/useQueueState.js';
 import { usePushNotification } from '../hooks/usePushNotification.js';
-import { apiTokenStatus, apiRequeueToken } from '../services/api.js';
+import { apiTokenStatus, apiRequeueToken, apiSpeakTokenStatus } from '../services/api.js';
 import { useAppConfig } from '../hooks/useAppConfig.js';
 import { getServiceLabel } from '../utils/industry.js';
 import StatusBadge from '../components/StatusBadge.jsx';
@@ -51,6 +51,57 @@ function formatWait(seconds) {
   if (m === 0) return `${seconds % 60}s`;
   if (m < 60) return `${m} min${m === 1 ? '' : 's'}`;
   return `${Math.floor(m / 60)}h ${m % 60}m`;
+}
+
+function formatSpeechWait(seconds) {
+  const safeSeconds = Math.max(0, Number(seconds) || 0);
+  const minutes = Math.round(safeSeconds / 60);
+  if (minutes <= 0) return 'less than a minute';
+  if (minutes === 1) return 'about 1 minute';
+  if (minutes < 60) return `about ${minutes} minutes`;
+  const hours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+  if (!remainder) return `about ${hours} hour${hours === 1 ? '' : 's'}`;
+  return `about ${hours} hour${hours === 1 ? '' : 's'} and ${remainder} minutes`;
+}
+
+function buildTokenSpeechText(token, serviceLabel, position, peopleAhead, etaSeconds) {
+  const number = String(token.number).padStart(2, '0');
+  const prefix = `Token number ${number} for ${serviceLabel}.`;
+
+  if (token.status === 'called') {
+    return `${prefix} Your number has been called. Please proceed to the counter now.`;
+  }
+  if (token.status === 'served') {
+    return `${prefix} Your visit is complete. Thank you.`;
+  }
+  if (token.status === 'expired') {
+    return `${prefix} This token has expired. Please request re-queue or take a new token.`;
+  }
+
+  const aheadPhrase = peopleAhead === 0
+    ? 'You are next in line.'
+    : `${peopleAhead} ${peopleAhead === 1 ? 'person is' : 'people are'} ahead of you.`;
+  return `${prefix} You are waiting at position ${position}. ${aheadPhrase} Approximate wait time is ${formatSpeechWait(etaSeconds)}.`;
+}
+
+async function playBhashiniAudio({ audioContent, mimeType }, audioRef) {
+  if (!audioContent) throw new Error('No audio was returned.');
+  const audio = new Audio(`data:${mimeType || 'audio/wav'};base64,${audioContent}`);
+  if (audioRef.current) audioRef.current.pause();
+  audioRef.current = audio;
+  await audio.play();
+}
+
+function speakWithBrowserVoice(text) {
+  if (!('speechSynthesis' in window) || !window.SpeechSynthesisUtterance) {
+    throw new Error('Speech is not supported in this browser.');
+  }
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = 'en-IN';
+  utterance.rate = 0.96;
+  window.speechSynthesis.speak(utterance);
 }
 
 function PrintableToken({ token, serviceLabel, orgName, location }) {
@@ -105,8 +156,11 @@ export default function MyToken() {
   const [feedbackDismissed, setFeedbackDismissed] = useState(false);
   const [requeueLoading, setRequeueLoading] = useState(false);
   const [requeueError, setRequeueError] = useState(null);
+  const [ttsLoading, setTtsLoading] = useState(false);
+  const [voiceNote, setVoiceNote] = useState(null);
   const prevStatusRef = useRef(null);
   const prevPositionRef = useRef(null);
+  const ttsAudioRef = useRef(null);
   const { permission: notifPermission, request: requestNotif, notify } = usePushNotification();
   const [notifBannerDismissed, setNotifBannerDismissed] = useState(
     () => localStorage.getItem('queueless.notifDismissed') === '1'
@@ -203,6 +257,30 @@ export default function MyToken() {
     }
   };
 
+  const handleListenStatus = async () => {
+    const fallbackText = buildTokenSpeechText(token, serviceLabel, position || 1, peopleAhead, etaSeconds);
+    setTtsLoading(true);
+    setVoiceNote(null);
+    try {
+      const audio = await apiSpeakTokenStatus(token.id, { language: 'en', gender: 'female' });
+      await playBhashiniAudio(audio, ttsAudioRef);
+    } catch (e) {
+      try {
+        speakWithBrowserVoice(fallbackText);
+        const code = e.response?.data?.code;
+        setVoiceNote(
+          code === 'BHASHINI_NOT_CONFIGURED'
+            ? 'Using browser voice until Bhashini credentials are added.'
+            : 'Using browser voice because Bhashini audio is unavailable.'
+        );
+      } catch {
+        setVoiceNote(e.response?.data?.error || e.message || 'Could not play token status audio.');
+      }
+    } finally {
+      setTtsLoading(false);
+    }
+  };
+
   if (error) {
     return (
       <div className="max-w-2xl mx-auto px-6 py-24 text-center">
@@ -252,6 +330,14 @@ export default function MyToken() {
       </div>
 
       <div className="mt-6 flex justify-center gap-3">
+        <button
+          onClick={handleListenStatus}
+          disabled={ttsLoading}
+          className="btn-primary text-xs px-3 py-1.5"
+          aria-label="Read token status aloud"
+        >
+          {ttsLoading ? 'Loading voice...' : 'Listen'}
+        </button>
         <button onClick={copyLink} className="btn-secondary text-xs px-3 py-1.5">
           {copied ? 'Copied!' : 'Copy link'}
         </button>
@@ -262,6 +348,10 @@ export default function MyToken() {
           {showQr ? 'Hide QR' : 'Show QR code'}
         </button>
       </div>
+
+      {voiceNote && (
+        <p className="mt-3 text-center text-xs text-graphite">{voiceNote}</p>
+      )}
 
       {showQr && (
         <div className="mt-4 flex justify-center">

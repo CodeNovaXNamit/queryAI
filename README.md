@@ -410,27 +410,32 @@ Message, notification, and file **content is served only via the JWT API**; the 
 
 ## 🚀 Getting Started
 
-### Backend
+QueueLess uses **Turborepo + npm workspaces** from the repository root.
 
 ```bash
-cd backend
-cp .env.example .env
+# Backend env
+cp backend/.env.example backend/.env
 # Fill in: FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY,
 #          FIREBASE_DATABASE_URL, JWT_SECRET, ADMIN_USERNAME, ADMIN_PASSWORD
-npm install
-npm test        # Jest + Supertest
-npm run dev     # http://localhost:4000
-```
 
-### Frontend
-
-```bash
-cd frontend
-cp .env.example .env.local
+# Frontend env
+cp frontend/.env.example frontend/.env.local
 # Fill in: VITE_API_BASE_URL=http://localhost:4000/api/v1
 # Fill in all VITE_FIREBASE_* values from Firebase Console > Project Settings
+
 npm install
-npm run dev     # http://localhost:5173
+npm run dev      # backend + frontend via Turbo
+```
+
+Root commands:
+
+```bash
+npm run dev              # backend + frontend
+npm run dev:backend      # backend only, http://localhost:4000
+npm run dev:frontend     # frontend only, http://localhost:5173
+npm run build            # Turbo build across workspaces
+npm test                 # Turbo test across workspaces
+npm run lint             # Turbo lint across workspaces
 ```
 
 ### Analytics Pipeline

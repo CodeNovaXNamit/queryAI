@@ -72,7 +72,10 @@ Leave `ANALYTICS_SINK=csv` for local dev — events will be written to `analytic
 ### Install and run
 
 ```bash
+# From backend/, return to the repo root and install all workspaces once.
+cd ..
 npm install
+cd backend
 
 # Run tests first (no Firebase connection needed — tests use mocks)
 npm test
@@ -116,7 +119,10 @@ Open `.env.local` and fill in:
 ### Install and run
 
 ```bash
+# From frontend/, return to the repo root and install all workspaces once.
+cd ..
 npm install
+cd frontend
 npm run dev
 ```
 
@@ -232,23 +238,27 @@ firebase deploy --only database,functions
 
 ## 6. Running Everything Together
 
-Open three terminal windows:
+QueueLess uses Turborepo from the repository root:
 
-**Terminal 1 — Backend**
 ```bash
-cd backend
+npm install
 npm run dev
-# Running on http://localhost:4000
+# Backend:  http://localhost:4000
+# Frontend: http://localhost:5173
 ```
 
-**Terminal 2 — Frontend**
+Focused commands:
+
 ```bash
-cd frontend
-npm run dev
-# Running on http://localhost:5173
+npm run dev:backend
+npm run dev:frontend
+npm run dev:lan
+npm run build
+npm test
 ```
 
-**Terminal 3 — Analytics (one-off, not a server)**
+Analytics is still a Python one-off:
+
 ```bash
 cd analytics
 python run_pipeline.py

@@ -1,4 +1,10 @@
 {
+  "name": "queueless-firebase",
+  "version": "1.6.0",
+  "private": true,
+  "scripts": {
+    "lint": "echo 'Add Firebase lint in v2'"
+  },
   "dependencies": {
     "firebase": "^12.13.0"
   }
